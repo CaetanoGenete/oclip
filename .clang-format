@@ -1,0 +1,30 @@
+---
+Language: C
+BasedOnStyle: LLVM
+
+# Indentation
+UseTab: Never
+
+ContinuationIndentWidth: 2
+
+# If parameters/arguments don't fit, put one per line.
+BinPackArguments: false
+BinPackParameters: false
+
+# Break before braces everywhere except control statements.
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterFunction: true
+  AfterStruct: false
+  AfterUnion: false
+  AfterEnum: false
+  AfterNamespace: true
+  AfterExternBlock: true
+  BeforeElse: true
+  AfterControlStatement: false
+
+# Keep lines reasonably short.
+ColumnLimit: 100
+
+IndentCaseLabels: true
+IndentCaseBlocks: true
