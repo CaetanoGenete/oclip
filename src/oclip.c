@@ -53,25 +53,19 @@ void encodebase64(uint32_t buffer, uint8_t n, FILE *output)
 }
 
 /**
- * @brief writes least significant 24 bits of `buffer` to output;
+ * @brief writes (up to) the 24 least significant bits of `buffer` to output;
  *
  * Bytes are written from the MSB -> LSB.
  *
  * @param buffer value to write.
  * @param output output file pointer.
- * @return true on early exit, false otherwise.
  */
-bool fwrite24r(uint32_t buffer, FILE *output)
+void fwrite24r(uint32_t buffer, uint8_t n, FILE *output)
 {
-  for (uint8_t i = 0; i < 3; ++i) {
-    char c = buffer >> 8 * (2 - i);
-    if (c == 0)
-      return true;
+  assert(n <= 3 && "buffer should fit no more than 3 bytes.");
 
-    fputc(c, output);
-  }
-
-  return false;
+  for (uint8_t i = 0; i < n; ++i)
+    fputc(buffer >> 8 * (2 - i), output);
 }
 
 /**
@@ -116,13 +110,13 @@ int readclipboard(FILE *out)
 
   if (count == 0) {
     ec = EX_DATAERR;
-    fputs("File end before OSC52 prefix!", ERR);
+    fputs("File end before OSC52 prefix!\n", ERR);
     goto cleanup;
   }
 
   if (memcmp(buffer, OSC52_PREFIX, OSC52_PREFIX_LEN) != 0) {
     ec = EX_DATAERR;
-    fputs("Unexpected stdin prefix!", ERR);
+    fputs("Unexpected stdin prefix!\n", ERR);
     goto cleanup;
   }
 
@@ -147,7 +141,7 @@ int readclipboard(FILE *out)
         else if (chr >= 'A' && chr <= 'Z')
           chr = chr - 'A';
         else {
-          if (chr != 27 && chr != '=')
+          if (chr != 7 && chr != 27 && chr != '=')
             fprintf(ERR, "Unexpected stream end: %d!\n", chr);
           goto streamend;
         }
@@ -157,9 +151,7 @@ int readclipboard(FILE *out)
 
       if (rem == 4) {
         rem = 0;
-        if (fwrite24r(value, out))
-          goto cleanup;
-
+        fwrite24r(value, 3, out);
         value = 0;
       }
     }
@@ -169,7 +161,7 @@ int readclipboard(FILE *out)
 
 streamend:
   if (rem)
-    fwrite24r(value, out);
+    fwrite24r(value, (6 * rem) >> 3, out);
 
 cleanup:
   tcsetattr(STDIN_FILENO, TCSAFLUSH, &old);
@@ -193,7 +185,7 @@ int writeclipboard(FILE *in)
   uint32_t value = 0;
 
   while ((count = fread(buffer, 1, sizeof(buffer), in))) {
-    const char *ptr = buffer;
+    uint8_t *ptr = (uint8_t *)buffer;
 
     while (count) {
       for (; rem < 3 && count; ++rem, --count, ++ptr)
