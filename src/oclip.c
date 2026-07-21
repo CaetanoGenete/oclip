@@ -103,7 +103,7 @@ int readclipboard(FILE *out)
   fclose(tty);
 
   size_t count = 0;
-  while ((count = read(STDIN_FILENO, buffer, sizeof(buffer) - size))) {
+  while ((count = read(STDIN_FILENO, buffer + size, sizeof(buffer) - size))) {
     if ((size += count) >= OSC52_PREFIX_LEN)
       break;
   }
@@ -116,7 +116,7 @@ int readclipboard(FILE *out)
 
   if (memcmp(buffer, OSC52_PREFIX, OSC52_PREFIX_LEN) != 0) {
     ec = EX_DATAERR;
-    fputs("Unexpected stdin prefix!\n", ERR);
+    fputs("Unexpected terminal response!\n", ERR);
     goto cleanup;
   }
 
@@ -236,12 +236,21 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
   return EX_OK;
 }
 
-const char *argp_program_version = "0.1.0";
+const char *argp_program_version = "0.1.1";
 
 static char doc[] =
-  "Writes and reads system clipboard.\n\n"
-  "Uses OSC52 to interface with system clipboard, make sure your terminal of choice "
-  "supports and has enabled OSC52 escape sequences.";
+  "Writes to and reads from the system clipboard.\n"
+  "\n"
+  "This program uses OSC52 to interface with the system clipboard. Ensure your "
+  "terminal supports, and has enabled, OSC52 escape sequences.\n"
+  "\n"
+  "If missing support for:\n"
+  "- OSC52 write: Nothing will be written to the clipboard (exit code 0).\n"
+  "- OSC52 read:  Clipboard reads will block indefinitely (CTRL+C to exit).\n"
+  "\n"
+  "Unless unavailable, reading the clipboard *should* be an almost instant operation. "
+  "Waiting more than 2-3 seconds, without being prompted, typically suggests "
+  "lacking OSC52 read functionality.";
 
 static struct argp_option options[] = {
   {
